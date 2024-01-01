@@ -1,0 +1,1236 @@
+asyncapi: 2.6.0
+
+info:
+  title: Qbo Websockets API
+  version: 'cloud-dev-4.3.0-ac72a519a'
+  description: |
+    ![](https://lh6.googleusercontent.com/YLbKKenjtFOm7Fr33-aMTTWZpg-RzZ3l5ogCV3fBNSd-1V89KMdM9Qy8kDfjDaKtzKRk4gayv5s2ndvtU4fXIsfvIbGUJtbBvzctgu1lmeaUSAm9d2-tRaGrfhs5O74b5HvgUPenBZbJMvg=s2048)
+    ## *Unlocking the power of cloud computing for anyone, anywhere.*
+
+    Qbo is a cloud management API that brings a faster and simplified cloud experience in bare metal. It lowers the barrier to entry for application owners to focus on building applications, not infrastructure - while reducing costs.
+
+    ### QBO API
+    - Qbo CLI is a client CLI that connects to the Qbo API using websockets. It can send a single command as a message and disconnect. Or it can keep the websocket open to continue receiving state messages from the mirror. It runs in docker.
+    - Qbo API is a cloud API and as such, it manages not only Kubernetes clusters but also cloud components. It provides a high performance Websockets API that can report in real time the state of the Kubernetes nodes (as containers), pods, processes and threads running in the host. Data structure is in JSON format and operations are performed via commands.
+    - Because of the speed and rate at which all operations occur, websockets become essential to obtain a real time representation of the state of the system. Qbo uses a concept of mirrors which are points of convergence for websockets connections where stoprs using the same mirror can get updates from relevant systems. For example a user using a mirror that is receiving updates from a Kubernetes pod watch will see updates in real time of such operation. In the same way if a pthread or process is created in the system to run a command will be seen by the user if they are in the same mirror. QBO API supports https (http/1.1 and h2) and websockets traffic over (http/1.1 and h2) for client connections and can proxy traffic using the same protocols. Thus it provides a single API for all cloud resources.
+    - [QBO CLI Docs](https://docs.qbo.io/#/cli)
+    - [AsyncAPI Studio](https://studio.asyncapi.com/?url=https://raw.githubusercontent.com/alexeadem/alexeadem.github.io/main/asyncapi.yaml)
+    
+
+servers:
+  public:
+    url: console.cloud.qbo.io
+    protocol: wss
+    security:
+      - qbo_uid: []
+      - qbo_aux: []
+    description: |
+      Public server api endpoint
+      Once the websocket is established you can send commands to the Qbo API to manage cloud infrastucture components.
+
+      ## Authentication
+      
+      Qbo can authenticate access to the API using a web interface or a CLI interface. The web interface uses oauth2 Google authentication and the CLI uses either a temporary universally unique token (via OAuth2 authentication) or a service account. Both methods as described below:
+      
+      ### Temporary Web Token
+
+      Note that when you login to the Web console @ https://console.cloud.qbo.io the web console is already configured and there is no further configuration needed for authentication. See Configuration priority for more info.
+      It can be retrieved by logging in to the web console @ https://console.cloud.qbo.io and getting user's CLI local configuration
+      ```bash
+      qbo get user -l | jq .cli[]?
+
+      ```
+      ```json
+      {
+          "qbo_port": 443,
+          "qbo_host": "172.17.0.1",
+          "qbo_uid": "33820cc1-d513-4fa8-88ac-1adb008c3864"
+      }
+      ````
+      Authentication Cookie:
+
+      ```bash
+      cookie: qbo_uid=33820cc1-d513-4fa8-88ac-1adb008c3864; qbo_aux=
+      ```
+      ### Service Account
+      Qbo service accounts use Elliptical curve cryptography (ECC) P-521 for encryption. A public key in json compact format `qbo_uid`` is shared as well as an auxiliary token `qbo_aux`` for authentication.
+      Before we can obtain and configure a service account a temporary web token is needed (as described in `Temporary Web Token` section above) to retrieve the service account.
+
+      ```bash
+      qbo get user -c alex@qbo.io | jq .users[]?.cli > ~/.qbo/cli.json
+      ```
+      ```json
+      {
+        "qbo_uid": {
+          "crv": "P-521",
+          "kty": "EC",
+          "x": "AMu-cWn4gmkQiCAJMeW4BfZUAhPwAA3rROnw6nGUk8hl3bvV7gKKng2Eov6oxTvg70kulH6Nbq2wvJbAzyAjnPlT",
+          "y": "Ab7VgSfOzG-7IgRF6ffUn5E0J43eDL8_vFtFtP7RihVgNBMUeZzo0yaskfx59SdqnL8q24wEHSTp4dDUxNal3kQ1"
+        },
+        "qbo_aux": "66fac858-a271-49cf-bad0-fdd9ff0b4787",
+        "qbo_port": 443,
+        "qbo_host": "nemo.cloud.qbo.io",
+        "qbo_user": "alex@qbo.io"
+      }
+      ```
+      Authentication Cookie:
+
+      ```bash
+      cookie: qbo_uid=${compact}; qbo_aux=66fac858-a271-49cf-bad0-fdd9ff0b4787
+      ```
+
+      Example code in `go` showing how `compact` can be generated:
+
+      ```go
+      plaintext := []byte("66fac858-a271-49cf-bad0-fdd9ff0b4787")
+
+      xEnc := "AMu-cWn4gmkQiCAJMeW4BfZUAhPwAA3rROnw6nGUk8hl3bvV7gKKng2Eov6oxTvg70kulH6Nbq2wvJbAzyAjnPlT"
+      yEnc := "Ab7VgSfOzG-7IgRF6ffUn5E0J43eDL8_vFtFtP7RihVgNBMUeZzo0yaskfx59SdqnL8q24wEHSTp4dDUxNal3kQ1"
+      dEnc := "AVuTcFe_AJetnzt2xYQu2M505A3YNoAiHgh7JlkbFJq7H3UNjmaEhawPiK0AU8IoimyfoN4cCSlF087u1_Cytqw7"
+      
+      x := new(big.Int)
+      temp, _ := b64.URLEncoding.DecodeString(xEnc)
+      x = x.SetBytes(temp)
+
+      y := new(big.Int)
+      temp, _ = b64.URLEncoding.DecodeString(yEnc)
+      y = y.SetBytes(temp)
+
+      d := new(big.Int)
+      temp, _ = b64.URLEncoding.DecodeString(dEnc)
+      d = d.SetBytes(temp)
+
+      privkey := new(ecdsa.PrivateKey)
+
+      privkey.PublicKey.Curve = elliptic.P521()
+      privkey.D = d
+      privkey.PublicKey.X = x
+      privkey.PublicKey.Y = y
+
+      fmt.Printf("X: %d\nY: %d\nD: %d\n", privkey.X, privkey.Y, privkey.D)
+
+      encrypter, err := gojose.NewEncrypter(gojose.A256CBC_HS512, gojose.Recipient{Algorithm: gojose.ECDH_ES, Key: privkey.Public()}, nil)
+      if err != nil {
+          panic(err)
+      }
+
+      encrypted, err := encrypter.Encrypt(plaintext)
+      if err != nil {
+          panic(err)
+      }
+
+      fmt.Printf("encrypted = %v\n", encrypted.Header)
+
+      compact, err := encrypted.CompactSerialize()
+      if err != nil {
+          panic(err)
+      }
+
+      fmt.Printf("Compact Encrypted: %v\n", compact)
+      ````
+      See also example code in [C](https://github.com/alexeadem/alexeadem.github.io/blob/main/C/test.c), [Java](https://github.com/alexeadem/alexeadem.github.io/blob/main/java/initial/src/main/java/com/example/springboot/EcdhjweApplication.java) and [Go](https://github.com/alexeadem/alexeadem.github.io/blob/main/go/test.go)
+
+
+channels:
+  /qbo:
+    publish:
+      description: Send command input to the Qbo API
+      operationId: qboCommandInput
+      message:
+        oneOf:
+          - $ref: '#/components/messages/version'
+          - $ref: '#/components/messages/get'
+          - $ref: '#/components/messages/start'
+          - $ref: '#/components/messages/stop'
+          - $ref: '#/components/messages/add'
+          - $ref: '#/components/messages/delete'
+    subscribe:
+      description: Receive command output from the Qbo API
+      operationId: qboCommandOutput
+      message:
+        oneOf:
+          - $ref: '#/components/messages/clusters'
+          - $ref: '#/components/messages/nodes'
+          - $ref: '#/components/messages/pods'
+          - $ref: '#/components/messages/services'
+          - $ref: '#/components/messages/networks'
+          - $ref: '#/components/messages/ipvs'
+          - $ref: '#/components/messages/users'
+          - $ref: '#/components/messages/clients'
+          - $ref: '#/components/messages/output'
+          - $ref: '#/components/messages/input'
+components:
+  messages:
+    version:
+      summary: Get Qbo API version.
+      description: Get Qbo CLoud API version by host.
+      contentType: application/json
+      headers:
+        type: object
+        properties:
+          qbo_uid:
+            $ref: "#/components/schemas/qbo_uid"
+          qbo_aux:
+            $ref: "#/components/schemas/qbo_aux"
+        required:
+        - qbo_uid
+        - qbo_aux
+      payload:
+        $ref: '#/components/schemas/version'
+      examples:
+        - payload:
+            cmd: version
+            uuid: 66fac858-a271-49cf-bad0-fdd9ff0b4787
+      # x-response:
+      #   $ref: '#/components/messages/version'
+    get:
+      summary: Get Qbo clusters, nodes, pods, services, networks, load balancers or users.
+      description: Gets Kubernetes clusters, nodes, pods, services, network, load balancers and users by name or IDs.
+      contentType: application/json
+      headers:
+        type: object
+        properties:
+          qbo_uid:
+            $ref: "#/components/schemas/qbo_uid"
+          qbo_aux:
+            $ref: "#/components/schemas/qbo_aux"
+        required:
+        - qbo_uid
+        - qbo_aux
+      payload:
+        $ref: '#/components/schemas/get'
+      examples:
+        - name: Get Kubernetes nodes by name
+          summary: Example of a command getting "dev" and "prod" Kubernetes clusters
+          payload:
+              cmd: get nodes dev prod
+              uuid: 66fac858-a271-49cf-bad0-fdd9ff0b4787
+        - name: Get all nodes
+          summary: Example of a command getting all Kubernetes nodes by user
+          payload:
+              cmd: get nodes -A
+              uuid: 66fac858-a271-49cf-bad0-fdd9ff0b4787
+        - name: Get all Kubernetes pods
+          summary: Example of a command getting all Kubernetes pods by user
+          payload:
+              cmd: get pods -A
+              uuid: 66fac858-a271-49cf-bad0-fdd9ff0b4787
+        - name: Get all Kubernetes services
+          summary: Example of a command getting all Kubernetes services by user
+          payload:
+              cmd: get services -A
+              uuid: 66fac858-a271-49cf-bad0-fdd9ff0b4787
+        - name: Get Kubernetes networks by name
+          summary: Example of a command getting Kubernetes networks for 'dev' and 'prod' clusters
+          payload:
+              cmd: get net dev prod
+              uuid: 66fac858-a271-49cf-bad0-fdd9ff0b4787
+        - name: Get all load balancers
+          summary: Example of a command getting all load balancer attached to Kubernetes clusters
+          payload:
+              cmd: get ipvs -A
+              uuid: 66fac858-a271-49cf-bad0-fdd9ff0b4787
+        - name: Get all user information
+          summary: Example of a command getting user information
+          payload:
+              cmd: get users -A
+              uuid: 66fac858-a271-49cf-bad0-fdd9ff0b4787
+        - name: Get all images
+          summary: Example of a command getting all Kubernetes images by version
+          payload:
+              cmd: get images -A
+              uuid: 66fac858-a271-49cf-bad0-fdd9ff0b4787
+      # x-response:
+      #   $ref: '#/components/messages/get'
+    start:
+      summary: Start Qbo clusters or nodes.
+      description: Starts Kubernetes cluster or nodes by name or id in Qbo Cloud. 
+      contentType: application/json
+      headers:
+        type: object
+        properties:
+          qbo_uid:
+            $ref: "#/components/schemas/qbo_uid"
+          qbo_aux:
+            $ref: "#/components/schemas/qbo_aux"
+        required:
+        - qbo_uid
+        - qbo_aux
+      payload:
+        $ref: '#/components/schemas/start'
+      examples:
+        - name: Start cluster by name
+          summary: Example of a command starting "dev" and "prod" clusters 
+          payload:
+              cmd: start clusters dev prod
+              uuid: 66fac858-a271-49cf-bad0-fdd9ff0b4787
+        - name: Atart all clusters
+          summary: Example of a command starting all cluster owned by the user
+          payload:
+              cmd: start clusters -A
+              uuid: 66fac858-a271-49cf-bad0-fdd9ff0b4787
+      # x-response:
+      #   $ref: '#/components/messages/start'
+    stop:
+      summary: Stop Qbo clusters or nodes.
+      description: Stops Kubernetes clusters or nodes by name or id in Qbo Cloud.
+      contentType: application/json
+      headers:
+        type: object
+        properties:
+          qbo_uid:
+            $ref: "#/components/schemas/qbo_uid"
+          qbo_aux:
+            $ref: "#/components/schemas/qbo_aux"
+        required:
+        - qbo_uid
+        - qbo_aux
+      payload:
+        $ref: '#/components/schemas/stop'
+      examples:
+        - payload:
+            cmd: stop clusters alex
+            uuid: 66fac858-a271-49cf-bad0-fdd9ff0b4787
+        - payload:
+            cmd: stop clusters -A
+            uuid: 66fac858-a271-49cf-bad0-fdd9ff0b4787
+      # x-response:
+      #   $ref: '#/components/messages/stop'
+    add:
+      summary: Add Qbo clusters or nodes.
+      description: Adds a Kubernetes cluster or scales up a Kubernetes cluster by name or id in Qbo Cloud. 
+      contentType: application/json
+      headers:
+        type: object
+        properties:
+          qbo_uid:
+            $ref: "#/components/schemas/qbo_uid"
+          qbo_aux:
+            $ref: "#/components/schemas/qbo_aux"
+        required:
+        - qbo_uid
+        - qbo_aux
+      payload:
+        $ref: '#/components/schemas/add'
+      examples:
+        - payload:
+            cmd: add cluster alex -i hub.docker.com/kindest/node:v1.27.3
+            uuid: 66fac858-a271-49cf-bad0-fdd9ff0b4787
+        - payload:
+            cmd: add cluster dev prod
+            uuid: 66fac858-a271-49cf-bad0-fdd9ff0b4787
+      # x-response:
+      #   $ref: '#/components/messages/add'
+    delete:
+      summary: Delete Qbo clusters or nodes.
+      description: Deletes Kubenetes clusters or nodes by name or id in Qbo Cloud. 
+      contentType: application/json
+      headers:
+        type: object
+        properties:
+          qbo_uid:
+            $ref: "#/components/schemas/qbo_uid"
+          qbo_aux:
+            $ref: "#/components/schemas/qbo_aux"
+        required:
+        - qbo_uid
+        - qbo_aux
+      payload:
+        $ref: '#/components/schemas/delete'
+      examples:
+        - payload:
+            cmd: delete cluster dev prod
+            uuid: 66fac858-a271-49cf-bad0-fdd9ff0b4787
+        - payload:
+            cmd: delete clusters -A
+            uuid: 66fac858-a271-49cf-bad0-fdd9ff0b4787
+      # x-response:
+      #   $ref: '#/components/messages/delete'
+    clusters:
+      summary: Kubernetes clusters.
+      description: List of Kubernetes clusters.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/_clusters'
+    nodes:
+      summary: Kubernetes nodes.
+      description: List of Kubernetes nodes.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/_nodes'
+    pods:
+      summary: Kubernetes pods.
+      description: List of Kubernetes pods.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/_pods'
+    services:
+      summary: Kubernetes service.
+      description: List of Kubernetes services.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/_services'
+    networks:
+      summary: Kubernetes networks.
+      description: List of Kubernetes networks.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/_networks'
+    ipvs:
+      summary: Kubernetes load balancers.
+      description: Contains the list of Kubernetes load balancers.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/_ipvs'
+    users:
+      summary: Kubernetes users.
+      description: List of Qbo users.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/_users'
+    clients:
+      summary: Kubernetes clients.
+      description: List of Qbo clients.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/_clients'
+    output:
+      summary: Qbo API output.
+      description: QBO API output command log message.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/_output'
+    input:
+      summary: Qbo API input command log message.
+      description: QBO API input command log message.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/_input'
+  schemas:
+    _clusters:
+      type: object
+      properties:
+        timestamp: 
+          type: string
+        status:
+          type: string
+        code: 
+          type: integer
+        command_id: 
+          type: string
+        command_line: 
+          type: string
+          format: uuid
+        command: 
+          type: string
+        subcommand:
+          type: string
+        apicommand:
+          type: string
+        callback:
+          type: string
+        uuid:
+          type: string
+          format: uuid
+        user:
+          type: string
+          format: email
+        agent: 
+          type: string
+        peer: 
+          type: string
+        host: 
+          type: string
+        source:
+          type: string
+        wsi:
+          type: string
+        thread_id:
+          type: integer
+          format: int64
+        vhost: 
+          type: string
+        clusters:
+           $ref: '#/components/schemas/clusters'
+    _nodes:
+      type: object
+      properties:
+        timestamp: 
+          type: string
+        status:
+          type: string
+        code: 
+          type: integer
+        command_id: 
+          type: string
+        command_line: 
+          type: string
+          format: uuid
+        command: 
+          type: string
+        subcommand:
+          type: string
+        apicommand:
+          type: string
+        callback:
+          type: string
+        uuid:
+          type: string
+          format: uuid
+        user:
+          type: string
+          format: email
+        agent: 
+          type: string
+        peer: 
+          type: string
+        host: 
+          type: string
+        source:
+          type: string
+        wsi:
+          type: string
+        thread_id:
+          type: integer
+          format: int64
+        vhost: 
+          type: string
+        nodes:
+           $ref: '#/components/schemas/nodes'
+    _pods:
+      type: object
+      properties:
+        timestamp: 
+          type: string
+        status:
+          type: string
+        code: 
+          type: integer
+        command_id: 
+          type: string
+        command_line: 
+          type: string
+          format: uuid
+        command: 
+          type: string
+        subcommand:
+          type: string
+        apicommand:
+          type: string
+        callback:
+          type: string
+        uuid:
+          type: string
+          format: uuid
+        user:
+          type: string
+          format: email
+        agent: 
+          type: string
+        peer: 
+          type: string
+        host: 
+          type: string
+        source:
+          type: string
+        wsi:
+          type: string
+        thread_id:
+          type: integer
+          format: int64
+        vhost: 
+          type: string
+        pods:
+           $ref: '#/components/schemas/pods'
+    _services:
+      type: object
+      properties:
+        timestamp: 
+          type: string
+        status:
+          type: string
+        code: 
+          type: integer
+        command_id: 
+          type: string
+        command_line: 
+          type: string
+          format: uuid
+        command: 
+          type: string
+        subcommand:
+          type: string
+        apicommand:
+          type: string
+        callback:
+          type: string
+        uuid:
+          type: string
+          format: uuid
+        user:
+          type: string
+          format: email
+        agent: 
+          type: string
+        peer: 
+          type: string
+        host: 
+          type: string
+        source:
+          type: string
+        wsi:
+          type: string
+        thread_id:
+          type: integer
+          format: int64
+        vhost: 
+          type: string
+        services:
+           $ref: '#/components/schemas/services'
+    _networks:
+      type: object
+      properties:
+        timestamp: 
+          type: string
+        status:
+          type: string
+        code: 
+          type: integer
+        command_id: 
+          type: string
+        command_line: 
+          type: string
+          format: uuid
+        command: 
+          type: string
+        subcommand:
+          type: string
+        apicommand:
+          type: string
+        callback:
+          type: string
+        uuid:
+          type: string
+          format: uuid
+        user:
+          type: string
+          format: email
+        agent: 
+          type: string
+        peer: 
+          type: string
+        host: 
+          type: string
+        source:
+          type: string
+        wsi:
+          type: string
+        thread_id:
+          type: integer
+          format: int64
+        vhost: 
+          type: string
+        networks:
+           $ref: '#/components/schemas/networks'
+    _ipvs:
+      type: object
+      properties:
+        timestamp: 
+          type: string
+        status:
+          type: string
+        code: 
+          type: integer
+        command_id: 
+          type: string
+        command_line: 
+          type: string
+          format: uuid
+        command: 
+          type: string
+        subcommand:
+          type: string
+        apicommand:
+          type: string
+        callback:
+          type: string
+        uuid:
+          type: string
+          format: uuid
+        user:
+          type: string
+          format: email
+        agent: 
+          type: string
+        peer: 
+          type: string
+        host: 
+          type: string
+        source:
+          type: string
+        wsi:
+          type: string
+        thread_id:
+          type: integer
+          format: int64
+        vhost: 
+          type: string
+        ipvs:
+           $ref: '#/components/schemas/ipvs'
+    _users:
+      type: object
+      properties:
+        timestamp: 
+          type: string
+        status:
+          type: string
+        code: 
+          type: integer
+        command_id: 
+          type: string
+        command_line: 
+          type: string
+          format: uuid
+        command: 
+          type: string
+        subcommand:
+          type: string
+        apicommand:
+          type: string
+        callback:
+          type: string
+        uuid:
+          type: string
+          format: uuid
+        user:
+          type: string
+          format: email
+        agent: 
+          type: string
+        peer: 
+          type: string
+        host: 
+          type: string
+        source:
+          type: string
+        wsi:
+          type: string
+        thread_id:
+          type: integer
+          format: int64
+        vhost: 
+          type: string
+        users:
+           $ref: '#/components/schemas/users'
+    _clients:
+      type: object
+      properties:
+        timestamp: 
+          type: string
+        status:
+          type: string
+        code: 
+          type: integer
+        command_id: 
+          type: string
+        command_line: 
+          type: string
+          format: uuid
+        command: 
+          type: string
+        subcommand:
+          type: string
+        apicommand:
+          type: string
+        callback:
+          type: string
+        uuid:
+          type: string
+          format: uuid
+        user:
+          type: string
+          format: email
+        agent: 
+          type: string
+        peer: 
+          type: string
+        host: 
+          type: string
+        source:
+          type: string
+        wsi:
+          type: string
+        thread_id:
+          type: integer
+          format: int64
+        vhost: 
+          type: string
+        clients:
+           $ref: '#/components/schemas/clients'
+    _input:
+      type: object
+      properties:
+        timestamp: 
+          type: string
+        status:
+          type: string
+        code: 
+          type: integer
+        command_id: 
+          type: string
+        command_line: 
+          type: string
+          format: uuid
+        command: 
+          type: string
+        subcommand:
+          type: string
+        apicommand:
+          type: string
+        callback:
+          type: string
+        uuid:
+          type: string
+          format: uuid
+        user:
+          type: string
+          format: email
+        agent: 
+          type: string
+        peer: 
+          type: string
+        host: 
+          type: string
+        source:
+          type: string
+        wsi:
+          type: string
+        thread_id:
+          type: integer
+          format: int64
+        vhost: 
+          type: string
+        input:
+           $ref: '#/components/schemas/input'
+    _output:
+      type: object
+      properties:
+        timestamp: 
+          type: string
+        status:
+          type: string
+        code: 
+          type: integer
+        command_id: 
+          type: string
+        command_line: 
+          type: string
+          format: uuid
+        command: 
+          type: string
+        subcommand:
+          type: string
+        apicommand:
+          type: string
+        callback:
+          type: string
+        uuid:
+          type: string
+          format: uuid
+        user:
+          type: string
+          format: email
+        agent: 
+          type: string
+        peer: 
+          type: string
+        host: 
+          type: string
+        source:
+          type: string
+        wsi:
+          type: string
+        thread_id:
+          type: integer
+          format: int64
+        vhost: 
+          type: string
+        output:
+           $ref: '#/components/schemas/output'
+    clusters:
+      type: object
+      properties:
+        address:
+          type: string
+        control_plane:
+          type: string
+        id:
+          $ref: '#/components/schemas/uuid'
+        name:
+          type: string
+        state:
+          type: string
+        user:
+          type: string
+          format: email
+    nodes:
+      type: object
+      properties:
+        name:
+          type: string
+        id:
+          type: string
+          format: uuid
+        image:
+          type: string
+        cluster:
+          type: string
+        state:
+          type: string
+        address:
+          type: string
+        os:
+          type: string  
+        kernel:
+          type: string
+        user:
+          type: string
+          format: email
+        cluster_id:
+          type: string
+          format: uuid
+    pods:
+      type: object
+      properties:
+        name:
+          type: string
+        id:
+          type: string
+          format: uuid
+        namespace: 
+          type: string
+        address: 
+          type: string
+        status: 
+          type: string
+        ready: 
+          type: integer
+        started:
+          type: integer
+        node: 
+          type: string
+        node_status:
+          type: string
+        cluster: 
+          type: string
+        user: 
+          type: string
+          format: email
+        cluster_id: 
+          type: string
+    services:
+      type: object
+      properties:
+        name:
+          type: string
+        id:
+          type: string
+          format: uuid
+        namespace: 
+          type: string
+        address:
+          type: string
+        external_address:
+          type: string
+        type: 
+          type: string
+        port_name: 
+          type: string
+        port_number:
+          type: integer
+        target_port: 
+          type: integer
+        node_port:
+          type: integer
+        protocol: 
+          type: string
+        cluster: 
+          type: string
+        user: 
+          type: string
+          format: email
+    networks:
+      type: object
+      properties:
+        name:
+          type: string
+        id:
+          type: string
+          format: uuid
+        subnet:
+          type: string
+        state:
+          type: string
+        user: 
+          type: string
+          format: email
+    ipvs:
+      type: object
+      properties:
+        id:
+          type: string
+        vip: 
+          type: string
+        vip_port:
+          type: string
+        rip: 
+          type: string
+        rip_port:
+          type: string
+        aux:
+          type: string
+        protocol:
+          type: string
+        scheduler: 
+          type: string
+        forward:
+          type: string
+        weight: 
+          type: integer
+        state: 
+          type: string
+        node: 
+          type: string
+        cluster: 
+          type: string
+        user: 
+          type: string
+          format: email
+    users:
+      type: object
+      properties:
+        name: 
+          type: string
+        uuid: 
+          type: string
+          format: uuid
+        self: 
+          type: integer
+        picture: 
+          type: string
+        email: 
+          type: string
+          format: email
+        type: 
+          type: integer
+        status: 
+          type: integer
+        id: 
+          type: string
+        shell: 
+          type: string
+        cli: 
+          type: object
+          properties:
+            exp: 
+              type: integer
+              format: int64
+            conf:
+              type: object
+              properties:
+                qbo_uid:
+                  type: object
+                  properties:
+                    crv:
+                       $ref: '#/components/schemas/crv'
+                    kty:
+                      $ref: '#/components/schemas/kty'
+                    x:
+                      $ref: '#/components/schemas/x'
+                    y:
+                       $ref: '#/components/schemas/x'
+                qbo_aux: 
+                  type: string
+                  format: uuid
+                qbo_port: 
+                  type: integer
+                qbo_host: 
+                  type: string
+                qbo_user: 
+                  type: string
+                  format: email
+    clients:
+      type: object
+      properties:
+        timestamp: 
+          type: integer
+          format: int64
+        user: 
+          type: string
+          format: email
+        mirror:
+          type: string
+          format: uuid
+        control: 
+          type: integer
+        address: 
+          type: string
+        agent: 
+          type: string
+        command: 
+          type: string
+        command_id: 
+          type: string
+          format: uuid
+        process_id: 
+          type: integer
+        thread_id:
+          type: integer
+          format: int64
+        wsi: 
+          type: string
+        wss_over_h2: 
+          type: integer
+        host: 
+          type: string
+    input:
+      type: array
+      items:
+        type: object
+        properties:
+          message: 
+            type: string
+    output:
+      type: array
+      items:
+        type: object
+        properties:
+          message: 
+            type: string
+    version:
+      type: object
+      properties:
+        cmd:
+          type: string
+          const: version
+        uuid:
+          $ref: '#/components/schemas/uuid'
+      required:
+        - cmd
+        - uuid
+    get:
+      type: object
+      properties:
+        cmd:
+          type: string
+          # const: get nodes -A
+        uuid:
+          $ref: '#/components/schemas/uuid'
+      required:
+        - cmd
+        - uuid
+    add:
+      type: object
+      properties:
+        cmd:
+          type: string
+        uuid:
+          $ref: '#/components/schemas/uuid'
+      required:
+        - cmd
+        - uuid
+    delete:
+      type: object
+      properties:
+        cmd:
+          type: string
+        uuid:
+          $ref: '#/components/schemas/uuid'
+      required:
+        - cmd
+        - uuid
+    start:
+      type: object
+      properties:
+        cmd:
+          type: string
+        uuid:
+          $ref: '#/components/schemas/uuid'
+      required:
+        - cmd
+        - uuid
+    stop:
+      type: object
+      properties:
+        cmd:
+          type: string
+        uuid:
+          $ref: '#/components/schemas/uuid'
+      required:
+        - cmd
+        - uuid
+    uuid:
+      type: string
+      # const: 1117e44d-94b0-4fdc-adf0-25c18eff4f4f
+      description: Qbo API unique universal indentifier
+      # pattern: '[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89aAbB][a-f0-9]{3}-[a-f0-9]{12}'
+      format: uuid
+    qbo_aux:
+      type: string
+      description: Qbo auxiliary universal unique indentifier
+      format: uuid
+      # default: ""
+    qbo_uid:
+      description: Qbo API key or uuid
+      type: string
+      # properties:
+      #   crv:
+      #     $ref: '#/components/schemas/crv'
+      #   kty:
+      #     $ref: '#/components/schemas/kty'
+      #   x:
+      #     $ref: '#/components/schemas/x'
+      #   y:
+      #     $ref: '#/components/schemas/y'
+      # required:
+      #   - crv
+      #   - kty
+      #   - x
+      #   - y
+    qbo_host:
+      type: string
+      default: console.cloud.qbo.io
+      description: Qbo API hostname or addres
+    qbo_port:
+      type: integer
+      default: 443
+      # enum:
+      #   - 9601
+      #   - 443
+      description: Qbo API port number
+    qbo_user:
+      type: string
+      format: email
+      description: Qbo user email
+    crv:
+      type: string
+      default: P-521
+    kty:
+      type: string
+      default: EC
+    x:
+      type: string
+    y:
+      type: string
+  securitySchemes:
+    qbo_uid:
+      name: qbo_uid
+      type: httpApiKey
+      in: cookie
+    qbo_aux:
+      name: qbo_aux
+      type: httpApiKey
+      in: cookie
+
+      
+      
