@@ -1,20 +1,20 @@
 asyncapi: 2.6.0
 
 info:
-  title: Qbo Websockets API
+  title: Qbo AsyncAPI
   version: 'cloud-dev-4.3.0-ac72a519a'
   description: |
     ![](https://lh6.googleusercontent.com/YLbKKenjtFOm7Fr33-aMTTWZpg-RzZ3l5ogCV3fBNSd-1V89KMdM9Qy8kDfjDaKtzKRk4gayv5s2ndvtU4fXIsfvIbGUJtbBvzctgu1lmeaUSAm9d2-tRaGrfhs5O74b5HvgUPenBZbJMvg=s2048)
     ## *Unlocking the power of cloud computing for anyone, anywhere.*
 
-    Qbo is a cloud management API that brings a faster and simplified cloud experience in bare metal. It lowers the barrier to entry for application owners to focus on building applications, not infrastructure - while reducing costs.
+    Qbo stands out as the exclusive AsyncAPI leveraging Docker in Docker (DinD) technology, dedicated to deploying and managing AI workloads in Kubernetes with unmatched metal performance.
 
-    ### QBO API
-    - Qbo CLI is a client CLI that connects to the Qbo API using websockets. It can send a single command as a message and disconnect. Or it can keep the websocket open to continue receiving state messages from the mirror. It runs in docker.
-    - Qbo API is a cloud API and as such, it manages not only Kubernetes clusters but also cloud components. It provides a high performance Websockets API that can report in real time the state of the Kubernetes nodes (as containers), pods, processes and threads running in the host. Data structure is in JSON format and operations are performed via commands.
-    - Because of the speed and rate at which all operations occur, websockets become essential to obtain a real time representation of the state of the system. Qbo uses a concept of mirrors which are points of convergence for websockets connections where stoprs using the same mirror can get updates from relevant systems. For example a user using a mirror that is receiving updates from a Kubernetes pod watch will see updates in real time of such operation. In the same way if a pthread or process is created in the system to run a command will be seen by the user if they are in the same mirror. QBO API supports https (http/1.1 and h2) and websockets traffic over (http/1.1 and h2) for client connections and can proxy traffic using the same protocols. Thus it provides a single API for all cloud resources.
+    ### QBO AsyncAPI:
+    - Qbo serves as a Cloud API, overseeing not only Kubernetes clusters but also various cloud components. It features a high-performance AsyncAPI capable of providing real-time updates on the status of Kubernetes nodes (represented as containers), pods, processes, and threads within the host. The data is structured in JSON, and interactions are facilitated through commands.
+    - Given the rapid pace of operations, websockets play a vital role in obtaining a real-time representation of the system's state. Qbo introduces the concept of 'mirrors,' acting as convergence points for websocket connections. This enables subscribers within the same 'mirror' to receive updates from relevant systems. For example, users connected to a 'mirror' monitoring Kubernetes 'pods' operations can observe real-time updates on such objects. Likewise, when a pthread executes a command or a process is generated in the system, these actions are instantly visible to all users within the mirror. Consequently, Qbo provides a unified API catering to all cloud components.
+    - The Qbo CLI functions as a command-line interface, connecting to the Qbo API via websockets. It offers the ability to send a single command as a message and then disconnect. Alternatively, it can establish a continuous websocket connection to receive real-time state messages from the mirror. The Qbo CLI operates within a Docker container.
     - [QBO CLI Docs](https://docs.qbo.io/#/cli)
-    - [AsyncAPI Studio](https://studio.asyncapi.com/?url=https://raw.githubusercontent.com/alexeadem/alexeadem.github.io/main/asyncapi.yaml)
+    - [AsyncAPI Studio](https://studio.asyncapi.com/?url=hhttps://raw.githubusercontent.com/alexeadem/qbo-asyncapi/main/asyncapi.yaml)
     
 
 servers:
@@ -128,7 +128,8 @@ servers:
 
       fmt.Printf("Compact Encrypted: %v\n", compact)
       ````
-      See also example code in [C](https://github.com/alexeadem/alexeadem.github.io/blob/main/C/test.c), [Java](https://github.com/alexeadem/alexeadem.github.io/blob/main/java/initial/src/main/java/com/example/springboot/EcdhjweApplication.java) and [Go](https://github.com/alexeadem/alexeadem.github.io/blob/main/go/test.go)
+      See also example code in [C](https://github.com/alexeadem/qbo-asyncapi/blob/main/C/test.c), [Java](https://github.com/alexeadem/qbo-asyncapi/blob/main/java/initial/src/main/java/com/example/springboot/EcdhjweApplication.java) and [Go](https://github.com/alexeadem/qbo-asyncapi/tree/main/go)
+      
 
 
 channels:
