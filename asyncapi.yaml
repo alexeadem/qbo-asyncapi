@@ -128,7 +128,7 @@ servers:
 
       fmt.Printf("Compact Encrypted: %v\n", compact)
       ````
-      See also example code in [C](https://github.com/alexeadem/qbo-asyncapi/blob/main/C/test.c), [Java](https://github.com/alexeadem/qbo-asyncapi/blob/main/java/initial/src/main/java/com/example/springboot/EcdhjweApplication.java) and [Go](https://github.com/alexeadem/qbo-asyncapi/tree/main/go)
+      See also example code in [C](https://github.com/alexeadem/qbo-asyncapi/blob/main/C/test.c), [Java](https://github.com/alexeadem/qbo-asyncapi/blob/main/java/initial/src/main/java/com/example/springboot/EcdhjweApplication.java) and [Go](https://github.com/alexeadem/qbo-asyncapi/blob/main/go/test.go)
       
 
 
