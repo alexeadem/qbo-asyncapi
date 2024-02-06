@@ -7,7 +7,7 @@ info:
     ![](https://lh6.googleusercontent.com/YLbKKenjtFOm7Fr33-aMTTWZpg-RzZ3l5ogCV3fBNSd-1V89KMdM9Qy8kDfjDaKtzKRk4gayv5s2ndvtU4fXIsfvIbGUJtbBvzctgu1lmeaUSAm9d2-tRaGrfhs5O74b5HvgUPenBZbJMvg=s2048)
     ## *Unlocking the power of cloud computing for anyone, anywhere.*
 
-    Qbo stands out as the exclusive AsyncAPI leveraging Docker in Docker (DinD) technology, dedicated to deploying and managing AI workloads in Kubernetes with unmatched metal performance.
+    Qbo stands out as the exclusive AsyncAPI leveraging Docker-in-Docker (DinD) technology, dedicated to deploying and managing AI workloads in Kubernetes with unmatched metal performance.
 
     ### Qbo AsyncAPI:
     - Qbo serves as a Cloud API, overseeing not only Kubernetes clusters but also various cloud components. It features a high-performance AsyncAPI capable of providing real-time updates on the status of Kubernetes nodes (represented as containers), pods, processes, and threads within the host. The data is structured in JSON, and interactions are facilitated through commands.
